@@ -22,7 +22,10 @@ class TestGeneratePagesRecursive(unittest.TestCase):
 
             template_path = os.path.join(temp_dir, "template.html")
             with open(template_path, "w", encoding="utf-8") as f:
-                f.write("<title>{{ Title }}</title>{{ Content }}")
+                f.write(
+                    '<a href="/home">Home</a><img src="/logo.png">'
+                    "<title>{{ Title }}</title>{{ Content }}"
+                )
 
             generate_pages_recursive(content_dir, template_path, output_dir)
 
@@ -37,6 +40,34 @@ class TestGeneratePagesRecursive(unittest.TestCase):
             self.assertIn("<title>Home</title>", home_page)
             self.assertIn("<title>Glorfindel</title>", blog_page)
             self.assertIn("<p>A blog post.</p>", blog_page)
+            self.assertIn('href="/home"', home_page)
+            self.assertIn('src="/logo.png"', home_page)
+
+    def test_rewrites_root_relative_links_with_basepath(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            content_dir = os.path.join(temp_dir, "content")
+            output_dir = os.path.join(temp_dir, "public")
+            os.makedirs(content_dir)
+
+            with open(os.path.join(content_dir, "index.md"), "w", encoding="utf-8") as f:
+                f.write("# Home\n\nWelcome.")
+
+            template_path = os.path.join(temp_dir, "template.html")
+            with open(template_path, "w", encoding="utf-8") as f:
+                f.write(
+                    '<a href="/about">About</a><img src="/images/logo.png">'
+                    "{{ Title }}{{ Content }}"
+                )
+
+            generate_pages_recursive(
+                content_dir, template_path, output_dir, "/my-site/"
+            )
+
+            with open(os.path.join(output_dir, "index.html"), encoding="utf-8") as f:
+                page = f.read()
+
+            self.assertIn('href="/my-site/about"', page)
+            self.assertIn('src="/my-site/images/logo.png"', page)
 
 
 if __name__ == "__main__":
